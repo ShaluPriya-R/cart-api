@@ -1,5 +1,6 @@
 import json
 import random
+from datetime import datetime, timedelta
 
 def generate_cart(cart_id):
     price = round(random.uniform(1000, 50000), 2)
@@ -7,6 +8,10 @@ def generate_cart(cart_id):
     discounted_total = round(price - (price * discount_percentage / 100), 2)
     shipping = round(random.uniform(50, 500), 2)
     tax = round(discounted_total * 0.12, 2)
+
+    is_returned = random.choice([True, False])
+    refund_amount = discounted_total if is_returned else 0.0
+    refund_shipping = is_returned and random.choice([True, False])
 
     product = {
         "id": random.randint(100, 999),
@@ -21,20 +26,33 @@ def generate_cart(cart_id):
         "thumbnail": "https://dummyimage.com/300x300/000/fff&text=Product"
     }
 
-    return {
+    cart = {
         "id": cart_id,
-        "products": [product]
+        "user_id": random.randint(1, 100),
+        "order_date": (datetime.now() - timedelta(days=random.randint(0, 60))).strftime("%Y-%m-%d"),
+        "products": [product],
+        "is_returned": is_returned,
+        "refund_amount": refund_amount,
+        "refund_shipping": refund_shipping
     }
 
+    return cart
+
 def add_daily_cart():
-    with open('carts.json', 'r+') as f:
-        data = json.load(f)
-        new_cart = generate_cart(len(data['carts']) + 1)
-        data['carts'].append(new_cart)
-        f.seek(0)
-        json.dump(data, f, indent=2)
-        f.truncate()
-        print(f"Added cart #{new_cart['id']}")
+    try:
+        with open('carts.json', 'r+') as f:
+            data = json.load(f)
+            new_cart = generate_cart(len(data['carts']) + 1)
+            data['carts'].append(new_cart)
+            f.seek(0)
+            json.dump(data, f, indent=2)
+            f.truncate()
+            print(f"✅ Added cart #{new_cart['id']}")
+    except FileNotFoundError:
+        with open('carts.json', 'w') as f:
+            data = {"carts": [generate_cart(1)]}
+            json.dump(data, f, indent=2)
+            print("✅ carts.json created with cart #1")
 
 if __name__ == '__main__':
     add_daily_cart()
