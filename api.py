@@ -1,16 +1,33 @@
 from flask import Flask, request, jsonify
 import json
+import os
 
 app = Flask(__name__)
 CART_FILE = 'carts.json'
 
+# ----------- Helpers for NDJSON -----------
+
 def load_carts():
-    with open(CART_FILE, 'r') as f:
-        return json.load(f)
+    """Load carts from NDJSON file. One JSON object per line."""
+    carts = []
+    if os.path.exists(CART_FILE):
+        with open(CART_FILE, 'r') as f:
+            for line in f:
+                if line.strip():  # Skip empty lines
+                    try:
+                        carts.append(json.loads(line))
+                    except json.JSONDecodeError:
+                        pass  # Ignore invalid lines
+    return {"carts": carts}
 
 def save_carts(data):
+    """Save carts to NDJSON file."""
     with open(CART_FILE, 'w') as f:
-        json.dump(data, f, indent=2)
+        for cart in data['carts']:
+            json.dump(cart, f)
+            f.write("\n")
+
+# ----------- Routes -----------
 
 @app.route('/')
 def home():
@@ -25,7 +42,7 @@ def get_carts():
 def get_cart(cart_id):
     data = load_carts()
     for cart in data['carts']:
-        if cart['id'] == cart_id:
+        if cart.get('id') == cart_id:
             return jsonify(cart)
     return jsonify({'error': 'Cart not found'}), 404
 
@@ -36,6 +53,8 @@ def add_cart():
     data['carts'].append(new_cart)
     save_carts(data)
     return jsonify({'message': 'Cart added successfully'}), 201
+
+# ----------- Main -----------
 
 if __name__ == '__main__':
     app.run(debug=True)
